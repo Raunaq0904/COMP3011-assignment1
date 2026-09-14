@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+</html>
+<head>
+    <meta charset="UTF-8">
+    <title>Assignment 1 - Speech to Text</title>
+    <style>
+        body {
+            font-family: sans-serif;
+            max-width: 500px;
+            margin: 60px auto;
+            text-align: center;
+        }
+        button {
+            font-size: 18px;
+            padding: 12px 24px;
+            margin: 10px;
+            cursor: pointer;
+        }
+        #status {
+            font-weight: bold;
+            margin: 15px 0;
+        }
+        #result {
+            border: 1px solid #ccc;
+            padding: 15px;
+            min-height: 60px;
+            margin-top: 20px;
+            text-align: left;
+        }
+    </style>
+</head>
+</body>
+    <h1>Speech to Text</h1>
+
+    <button id="recordBtn">Record</button>
+    <button id="stopBtn" style="display: none;">Stop</button>
+
+    <div id="status">Ready</div>
+
+    <div id="result">Transcribed text will appear here.</div>
+	<script>
+	    const recordBtn = document.getElementById('recordBtn');
+	    const stopBtn = document.getElementById('stopBtn');
+	    const statusDiv = document.getElementById('status');
+	    const resultDiv = document.getElementById('result');
+
+	    let mediaRecorder;
+	    let audioChunks = [];
+
+	    recordBtn.addEventListener('click', async () => {
+	        recordBtn.disabled = true;
+	        statusDiv.textContent = 'Requesting microphone access...';
+
+	        let stream;
+	        try {
+	            stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+	        } catch (err) {
+	            if (err.name === 'NotFoundError') {
+	                statusDiv.textContent = 'No microphone found on this device.';
+	            } else if (err.name === 'NotAllowedError') {
+	                statusDiv.textContent = 'Microphone access denied. Please allow access and try again.';
+	            } else {
+	                statusDiv.textContent = 'Could not access microphone: ' + err.message;
+	            }
+	            recordBtn.disabled = false;
+	            return;
+	        }
+
+	        mediaRecorder = new MediaRecorder(stream);
+	        audioChunks = [];
+
+	        mediaRecorder.addEventListener('dataavailable', (event) => {
+	            audioChunks.push(event.data);
+	        });
+
+	        mediaRecorder.addEventListener('stop', async () => {
+	            const audioBlob = new Blob(audioChunks, { type: 'audio/webm' });
+	            statusDiv.textContent = 'Uploading and transcribing...';
+
+	            const formData = new FormData();
+	            formData.append('file', audioBlob, 'recording.webm');
+
+	            try {
+	                const response = await fetch('/api/transcribe', {
+	                    method: 'POST',
+	                    body: formData
+	                });
+	                const responseText = await response.text();
+
+	                let data;
+	                try {
+	                    data = JSON.parse(responseText);
+	                } catch (parseErr) {
+	                    resultDiv.textContent = 'Server error: ' + responseText;
+	                    return;
+	                }
+
+	                if (!response.ok) {
+	                    resultDiv.textContent = 'Server error: ' + (data.error || responseText);
+	                } else if (typeof data.text === 'string') {
+	                    resultDiv.textContent = data.text;
+	                } else {
+	                    resultDiv.textContent = 'Unexpected response from server.';
+	                }
+
+	            } catch (uploadErr) {
+	                console.error('Upload error:', uploadErr);
+	                resultDiv.textContent = 'Network error: could not reach the server.';
+	            } finally {
+	                statusDiv.textContent = 'Ready';
+	                recordBtn.disabled = false;
+	            }
+	        });
+
+	        mediaRecorder.start();
+	        statusDiv.textContent = 'Recording...';
+	        recordBtn.style.display = 'none';
+	        stopBtn.style.display = 'inline-block';
+	    });
+
+	    stopBtn.addEventListener('click', () => {
+	        mediaRecorder.stop();
+	        stopBtn.style.display = 'none';
+	        recordBtn.style.display = 'inline-block';
+	    });
+	</script>
+</body>
+</html>
