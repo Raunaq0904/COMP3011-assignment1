@@ -16,14 +16,10 @@ public class TranscriptionController {
     }
 
     @PostMapping("/api/transcribe")
-    public String receiveAudio(@RequestParam("file") MultipartFile file) {
+    public String receiveAudio(@RequestParam("file") MultipartFile file) throws Exception {
         if (file.isEmpty()) {
-            return "No file received.";
+            throw new IllegalArgumentException("No file received.");
         }
-        try {
-            return transcriptionService.transcribe(file);
-        } catch (Exception e) {
-            return "Error calling transcription service: " + e.getMessage();
-        }
+        return transcriptionService.transcribe(file);
     }
 }
