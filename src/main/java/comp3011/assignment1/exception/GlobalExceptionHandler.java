@@ -7,6 +7,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.client.HttpClientErrorException;
+import org.springframework.web.servlet.resource.NoResourceFoundException;
 
 import java.time.Instant;
 
@@ -25,6 +26,11 @@ public class GlobalExceptionHandler {
         // so we report it as 400 rather than 500.
         return buildResponse(HttpStatus.BAD_REQUEST,
                 "The speech-to-text service rejected the request: " + ex.getStatusText(), request);
+    }
+
+    @ExceptionHandler(NoResourceFoundException.class)
+    public ResponseEntity<ErrorResponse> handleNotFound(NoResourceFoundException ex, HttpServletRequest request) {
+        return buildResponse(HttpStatus.NOT_FOUND, "The requested resource was not found.", request);
     }
 
     @ExceptionHandler(Exception.class)

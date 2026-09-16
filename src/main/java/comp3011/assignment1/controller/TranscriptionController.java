@@ -17,7 +17,6 @@ public class TranscriptionController {
 
     @PostMapping("/api/transcribe")
     public String receiveAudio(@RequestParam("file") MultipartFile file) throws Exception {
-        System.out.println("Handling request on thread: " + Thread.currentThread());
         if (file.isEmpty()) {
             throw new IllegalArgumentException("No file received.");
         }
